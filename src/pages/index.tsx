@@ -16,6 +16,8 @@ import {
   UserButton,
 } from "@clerk/nextjs";
 import { Bars3Icon, BellIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { mockData } from "./api/data";
+import { InferGetServerSidePropsType } from "next";
 
 const user = {
   name: "Tom Cook",
@@ -38,8 +40,14 @@ const userNavigation = [
 function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(" ");
 }
+export async function getServerSideProps() {
+  // Pass data to the page via props
+  return { props: { data: mockData } };
+}
 
-export default function Main() {
+export default function Main({
+  data,
+}: InferGetServerSidePropsType<typeof getServerSideProps>) {
   return (
     <>
       <div className="min-h-full">
@@ -174,7 +182,7 @@ export default function Main() {
           <main>
             <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
               {/* Your content */}
-              <DashboardTable></DashboardTable>
+              <DashboardTable data={data}></DashboardTable> 
             </div>
           </main>
         </div>

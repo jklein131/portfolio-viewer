@@ -1,15 +1,62 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import type { NextApiRequest, NextApiResponse } from "next";
 var bs = require("black-scholes");
-type Data = {
-  stockPrice: number;
-  options: any;
-};
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<Data>
-) {
+export interface Root {
+  stockPrice: number;
+  options: Options;
+}
+
+export interface Options {
+  options: Options2;
+}
+
+export interface Options2 {
+  calls: Call[];
+  puts: Put[];
+}
+
+export interface Call {
+  contractSymbol: string;
+  strike: number;
+  currency: string;
+  lastPrice: number;
+  change: number;
+  percentChange: number;
+  volume?: number;
+  openInterest: number;
+  bid: number;
+  ask: number;
+  contractSize: string;
+  expiration: string;
+  lastTradeDate: string;
+  impliedVolatility: number;
+  inTheMoney: boolean;
+  optionValue: number;
+}
+
+export interface Put {
+  contractSymbol: string;
+  strike: number;
+  currency: string;
+  lastPrice: number;
+  change: number;
+  percentChange: number;
+  openInterest: number;
+  bid: number;
+  ask: number;
+  contractSize: string;
+  expiration: string;
+  lastTradeDate: string;
+  impliedVolatility: number;
+  inTheMoney: boolean;
+  optionValue: number;
+  volume?: number;
+}
+
+export type OptionsReturnData = Root;
+
+export async function getOptionsForTicker(symbol: string) {
   const yf = require("yahoo-finance2").default;
 
   // Fetch stock price for a specific ticker symbol
@@ -23,14 +70,8 @@ export default async function handler(
     const options = await yf.options(symbol);
     return options;
   };
-
-  // Example usage
-
-  const symbol = "AAPL"; // Apple Inc.
-
   // Get stock price
   const stockPrice = await getStockPrice(symbol);
-  console.log(`Current Stock Price: ${stockPrice}`);
 
   // Get option chain (which includes strike prices and expirations)
   const optionData = await getOptionChain(symbol);
@@ -56,7 +97,10 @@ export default async function handler(
   }
 
   // Main function to calculate Black-Scholes price from option data
-  function calculateOptionPrice(option: OptionData): number {
+  function calculateOptionPrice(
+    option: OptionData,
+    optionType: "call" | "put"
+  ): number {
     const stockPrice = option.bid; // Using bid price as the current stock price (S)
     const strikePrice = option.strike; // Strike price (K)
     const expirationDate = new Date(option.expiration);
@@ -75,33 +119,41 @@ export default async function handler(
       1 / 365,
       volatility,
       riskFreeRate,
-      "call"
+      optionType
     );
   }
 
-  // Example usage with the provided option data
-  const optionData1: OptionData = {
-    contractSymbol: "AAPL240927C00105000",
-    strike: 105,
-    currency: "USD",
-    lastPrice: 117.6,
-    change: 0,
-    percentChange: 0,
-    volume: 1,
-    openInterest: 1,
-    bid: 121.9,
-    ask: 123.25,
-    contractSize: "REGULAR",
-    expiration: "2024-09-27T00:00:00.000Z",
-    lastTradeDate: "2024-09-03T18:16:00.000Z",
-    impliedVolatility: 3.93750015625,
-    inTheMoney: true,
-  };
-
   // Calculate the Black-Scholes price
-  const option = optionData.options[0].calls[0];
-  console.log("option", option);
-  const optionPrice = calculateOptionPrice(option);
-  console.log(`Call Option Price: ${optionPrice}`);
-  res.status(200).json({ stockPrice, options: optionData });
+  const optionRet = {
+    options: {
+      calls: optionData.options[0].calls.map((t: any) => {
+        return {
+          ...t,
+          optionValue: calculateOptionPrice(t, "call"),
+        };
+      }),
+      puts: optionData.options[0].puts.map((t: any) => {
+        return {
+          ...t,
+          optionValue: calculateOptionPrice(t, "put"),
+        };
+      }),
+    },
+  };
+  return { stockPrice, options: optionRet } as OptionsReturnData;
+}
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<OptionsReturnData | { error: string }>
+) {
+  // Example usage
+
+  if (!req.query.ticker) {
+    res.status(400).json({ error: "ticker error" });
+    return;
+  }
+
+  const symbol = req.query.ticker as string; // Apple Inc.
+
+  res.status(200).json(await getOptionsForTicker(symbol));
 }

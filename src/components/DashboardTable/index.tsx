@@ -38,13 +38,13 @@ import {
 } from "@/components/ui/table";
 
 import { Position } from "./types";
-import { columns, mockData } from "./constants";
+import { columns } from "./constants";
 import { error } from "console";
 import useBtcUsdMultiplier from "@/hooks/useBtcUsdMultiplier";
 import { useConnect } from "./useConnect";
 
-export default function DashboardTable() {
-  const { stats, tableData, search, table, setSearch } = useConnect();
+export default function DashboardTable({ data }: { data: Position[] }) {
+  const { stats, tableData, search, table, setSearch } = useConnect({ data });
 
   return (
     <div className="w-full">

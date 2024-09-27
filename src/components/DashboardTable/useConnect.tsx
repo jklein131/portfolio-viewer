@@ -15,11 +15,11 @@ import {
 import { Chart } from "react-google-charts";
 import { advancedSearch, cn, getPercentColor } from "@/lib/utils";
 import { Position } from "./types";
-import { columns, mockData } from "./constants";
+import { columns } from "./constants";
 import { error } from "console";
 import useBtcUsdMultiplier from "@/hooks/useBtcUsdMultiplier";
 
-export const useConnect = () => {
+export const useConnect = ({ data }: { data: Position[] }) => {
   const btcData = useBtcUsdMultiplier();
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [search, setSearch] = React.useState<string>("");
@@ -48,9 +48,9 @@ export const useConnect = () => {
       });
     };
 
-    const hydratedData = rowHydrator(mockData);
+    const hydratedData = rowHydrator(data);
     return advancedSearch(search, hydratedData);
-  }, [search, mockData, btcData.btcUsd]);
+  }, [search, data, btcData.btcUsd]);
 
   const table = useReactTable({
     data: tableData.data,
